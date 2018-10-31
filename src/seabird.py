@@ -20,6 +20,12 @@ class SBE9Plus():
 
         # Lists with raw data received from serial
         self.raw_data = []
+        
+        # Used to verify that raw data is the right size
+        self.raw_data_len = 0
+        
+        # Responsible for store the words removed from the raw data recived
+        self.removed_words = []
 
         # Responsible for managing the exchange of data between threads
         self.queue = Queue()
@@ -135,8 +141,6 @@ class SBE9Plus():
     def start_collecting(self, nMedia="24"):
         self.send_cmd("A" + nMedia + "\n")
         self.send_cmd("U\n")
-        self.send_cmd("X3\n")
-        self.send_cmd("X4\n")
         self.send_cmd("X8\n")
         self.send_cmd("GR\n")
 
@@ -155,6 +159,7 @@ class SBE9Plus():
         return saida
 
     def read_cal(self, cal_file, removed_words=[]):
+        self.removed_words = removed_words
         cal = ET.ElementTree(file=cal_file)
         self.temperature_cal = self.get_dictionary(cal.iterfind(
             "Instrument/SensorArray/Sensor/TemperatureSensor/"))
@@ -203,7 +208,7 @@ class SBE9Plus():
         self.pressure_temperature_compensation["Description"] = "Pressure sensor temperature"
         self.pressure_temperature_compensation["Word"] = 10
 
-        current_byte = 2
+        current_byte = 0
         if 0 not in removed_words:
             self.temperature_cal["First Byte Position"] = current_byte
             current_byte += 6
@@ -254,10 +259,13 @@ class SBE9Plus():
 
         if 10 not in removed_words:
             self.pressure_temperature_compensation["First Byte Position"] = current_byte
-            current_byte += 3
+            
+        self.raw_data_len = current_byte + 6
 
     def convert_data_output(self, raw_data, time):
-        if len(raw_data) > 0:
+        raw_data = raw_data.replace("b'","").replace("\\r\\n'","")
+        
+        if len(raw_data) == self.raw_data_len:
             # primary temperature page 66 from manual 11pV2_017HighRes.pdf
             fbp = self.temperature_cal["First Byte Position"]
             tbyte0 = int(raw_data[fbp:fbp + 2], 16)
