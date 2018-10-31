@@ -138,10 +138,17 @@ class SBE9Plus():
         f = len(self.data)
         return self.data[i:f].copy().reset_index(drop=True)
 
-    def start_collecting(self, nMedia="24"):
-        self.send_cmd("A" + nMedia + "\n")
+    def start_collecting(self, n_avg=24):
+        """Sends parameters required for SBE11 to start collecting SBE9 data.
+        
+        Keyword arguments:
+        n_avg -- Number of scans that the SBE11 will calculate simple avarage, before sending 
+        through the serial port. The SB9 has a sample rate of 24 Hz. (default 24)        
+        """
+        self.send_cmd("A" + str(n_avg) + "\n")
         self.send_cmd("U\n")
-        self.send_cmd("X8\n")
+        for word in self.removed_words:
+            self.send_cmd("X"+str(word)+"\n")
         self.send_cmd("GR\n")
 
     def stop_collecting(self):
