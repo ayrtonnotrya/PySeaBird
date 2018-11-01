@@ -10,7 +10,6 @@ import serial
 import time
 import datetime
 
-
 class SBE9Plus():
     def __init__(self):
 
@@ -29,12 +28,6 @@ class SBE9Plus():
 
         # Responsible for managing the exchange of data between threads
         self.queue = Queue()
-
-        # Responsible for managing the thread
-        self.t_stop = threading.Event()
-        self.t = Thread(target=self.read_thread, args=(
-            self.ser, self.queue, self.t_stop))
-        self.t.setDaemon(True)
 
         # Lists with sensor data
         self.temperature = []
@@ -87,11 +80,20 @@ class SBE9Plus():
         self.project = "not informed"
 
     def init_comm(self, port="/dev/ttyUSB0", baudrate=19200):
+        """Starts communication with SBE11 through the serial port and creates a thread to buff received data.
+        
+        Keyword arguments:
+        port -- Serial port address. (default "/dev/ttyUSB0")
+        baudrate -- SBE11's baudrate (default 19200)        
+        """
         try:
             self.ser.port = port
             self.ser.baudrate = baudrate
             self.ser.open()
             self.isComm = True
+            self.t_stop = threading.Event()
+            self.t = Thread(target=self.read_thread, args=(self.ser, self.queue, self.t_stop))
+            self.t.setDaemon(True)
             self.t.start()
             return True
         except serial.SerialException:
