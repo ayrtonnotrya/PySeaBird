@@ -64,6 +64,8 @@ class SBE9Plus():
         self.analog3_cal = {}
         self.analog4_cal = {}
         self.analog5_cal = {}
+        self.analog6_cal = {}
+        self.analog7_cal = {}
 
         self.temperature_cal["Description"] = "Primary temperature"
         self.temperature_cal["Word"] = 0
@@ -92,6 +94,12 @@ class SBE9Plus():
         self.analog5_cal["Description"] = "Analog Input 5"
         self.analog5_cal["Word"] = 7
 
+        self.analog6_cal["Description"] = "Analog Input 6"
+        self.analog6_cal["Word"] = 8
+
+        self.analog7_cal["Description"] = "Analog Input 7"
+        self.analog7_cal["Word"] = 8
+
         self.pressure_temperature_compensation["Description"] = "Pressure sensor temperature"
         self.pressure_temperature_compensation["Word"] = 10
 
@@ -102,13 +110,16 @@ class SBE9Plus():
         self.analog3 = []
         self.analog4 = []
         self.analog5 = []
+        self.analog6 = []
+        self.analog7 = []
 
         # DataFrame with data from all sensors
         self.scan = 0
         self.data = pd.DataFrame(columns=["Scan", "Time", "Temperature[°C]", "Pressure[dbar]", "Condutivity[S/m]",
                                           "Salinity[PSU]", "Analog Input 0[V]", "Analog Input 1[V]",
                                           "Analog Input 2[V]", "Analog Input 3[V]", "Analog Input 4[V]",
-                                          "Analog Input 5[V]", "Project", "Station"])
+                                          "Analog Input 5[V]", "Analog Input 6[V]",
+                                          "Analog Input 7[V]", "Project", "Station"])
 
         # Responsible for registering the profiling station
         self.station = "not informed"
@@ -268,7 +279,12 @@ class SBE9Plus():
             current_byte += 3
 
         if 8 not in removed_words:
-            current_byte += 6
+            self.analog6_cal["First Byte Position"] = current_byte
+            current_byte += 3
+
+        if 8 not in removed_words:
+            self.analog7_cal["First Byte Position"] = current_byte
+            current_byte += 3
 
         if 9 not in removed_words:
             current_byte += 6
@@ -391,12 +407,29 @@ class SBE9Plus():
 
             self.analog5.append(analog5)
 
+            if self.analog6_cal["Word"] not in self.removed_words:
+                fbp = self.analog6_cal["First Byte Position"]
+                analog6 = 5 * (1 - (int(raw_data[fbp:fbp + 3], 16) / 4095))
+            else:
+                analog6 = "Removed"
+                
+            self.analog6.append(analog6)
+
+            if self.analog7_cal["Word"] not in self.removed_words:
+                fbp = self.analog7_cal["First Byte Position"]
+                analog7 = 5 * (1 - (int(raw_data[fbp:fbp + 3], 16) / 4095))
+            else:
+                analog7 = "Removed"
+                
+            self.analog7.append(analog7)
+
             data_converted = {"Scan": self.scan, "Time": time, "Temperature[°C]": its90,
                               "Pressure[dbar]": pressure, "Condutivity[S/m]": condutivity,
                               "Salinity[PSU]": salinity,
                               "Analog Input 0[V]": analog0, "Analog Input 1[V]": analog1,
                               "Analog Input 2[V]": analog2, "Analog Input 3[V]": analog3,
                               "Analog Input 4[V]": analog4, "Analog Input 5[V]": analog5,
+                              "Analog Input 6[V]": analog6, "Analog Input 7[V]": analog7,
                               "Project": self.project, "Station": self.station}
 
             self.data.loc[self.scan] = data_converted
