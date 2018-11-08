@@ -224,16 +224,16 @@ class SBE9Plus():
     def read_cal(self, cal_file, removed_words=[]):
         self.removed_words = removed_words
         cal = ET.ElementTree(file=cal_file)
-        self.temperature_cal = self.get_dictionary(cal.iterfind(
-            "Instrument/SensorArray/Sensor/TemperatureSensor/"))
-        self.conductivity_cal = self.get_dictionary(cal.iterfind(
-            "Instrument/SensorArray/Sensor/ConductivitySensor/"))
-        self.pressure_cal = self.get_dictionary(cal.iterfind(
-            "Instrument/SensorArray/Sensor/PressureSensor/"))
-        self.altimeter_cal = self.get_dictionary(cal.iterfind(
-            "Instrument/SensorArray/Sensor/AltimeterSensor/"))
-        self.oxygen_cal = self.get_dictionary(cal.iterfind(
-            "Instrument/SensorArray/Sensor/OxygenSensor/"))
+        self.temperature_cal.update(self.get_dictionary(cal.iterfind(
+            "Instrument/SensorArray/Sensor/TemperatureSensor/")))
+        self.conductivity_cal.update(self.get_dictionary(cal.iterfind(
+            "Instrument/SensorArray/Sensor/ConductivitySensor/")))
+        self.pressure_cal.update(self.get_dictionary(cal.iterfind(
+            "Instrument/SensorArray/Sensor/PressureSensor/")))
+        self.altimeter_cal.update(self.get_dictionary(cal.iterfind(
+            "Instrument/SensorArray/Sensor/AltimeterSensor/")))
+        self.oxygen_cal.update(self.get_dictionary(cal.iterfind(
+            "Instrument/SensorArray/Sensor/OxygenSensor/")))
 
         current_byte = 0
         if 0 not in removed_words:
@@ -295,116 +295,152 @@ class SBE9Plus():
         self.raw_data_len = current_byte + 6
 
     def convert_data_output(self, raw_data, time):
+        """Converts the Hex raw data to engineering units.
+        
+        Keyword arguments:
+        raw_data -- Hex format data received from SBE11.
+        time -- Time when the data was collected.
+        """
         raw_data = raw_data.replace("b'","").replace("\\r\\n'","")
         
         if len(raw_data) == self.raw_data_len:
-            # primary temperature page 66 from manual 11pV2_017HighRes.pdf
-            fbp = self.temperature_cal["First Byte Position"]
-            tbyte0 = int(raw_data[fbp:fbp + 2], 16)
-            tbyte1 = int(raw_data[fbp + 2:fbp + 4], 16)
-            tbyte2 = int(raw_data[fbp + 4:fbp + 6], 16)
+            if self.temperature_cal["Word"] not in self.removed_words:
+                # primary temperature page 66 from manual 11pV2_017HighRes.pdf
+                fbp = self.temperature_cal["First Byte Position"]
+                tbyte0 = int(raw_data[fbp:fbp + 2], 16)
+                tbyte1 = int(raw_data[fbp + 2:fbp + 4], 16)
+                tbyte2 = int(raw_data[fbp + 4:fbp + 6], 16)
 
-            tf = tbyte0 * 256 + tbyte1 + tbyte2 / 256
+                tf = tbyte0 * 256 + tbyte1 + tbyte2 / 256
 
-            tf0 = self.temperature_cal['F0']
-            tg = self.temperature_cal["G"]
-            th = self.temperature_cal["H"]
-            ti = self.temperature_cal["I"]
-            tj = self.temperature_cal["J"]
+                tf0 = self.temperature_cal['F0']
+                tg = self.temperature_cal["G"]
+                th = self.temperature_cal["H"]
+                ti = self.temperature_cal["I"]
+                tj = self.temperature_cal["J"]
 
-            its90 = 1 / (
-                tg + th * np.log(tf0 / tf) + ti * (np.log(tf0 / tf)) ** 2 + tj * (np.log(tf0 / tf)) ** 3) - 273.15
-            self.temperature.append(its90)
+                its90 = 1 / (
+                    tg + th * np.log(tf0 / tf) + ti * (np.log(tf0 / tf)) ** 2 + tj * (np.log(tf0 / tf)) ** 3) - 273.15
+            else:
+                its90 = "Removed"
+                
+            self.temperature.append("Removed")
 
-            fbp = self.pressure_cal["First Byte Position"]
-            pbyte0 = int(raw_data[fbp:fbp + 2], 16)
-            pbyte1 = int(raw_data[fbp + 2:fbp + 4], 16)
-            pbyte2 = int(raw_data[fbp + 4:fbp + 6], 16)
+            if self.pressure_cal["Word"] not in self.removed_words:
+                fbp = self.pressure_cal["First Byte Position"]
+                pbyte0 = int(raw_data[fbp:fbp + 2], 16)
+                pbyte1 = int(raw_data[fbp + 2:fbp + 4], 16)
+                pbyte2 = int(raw_data[fbp + 4:fbp + 6], 16)
 
-            # Pressure Temperature Compensation page 68
-            pM = self.pressure_cal['AD590M']
-            pB = self.pressure_cal['AD590B']
+                # Pressure Temperature Compensation page 68
+                pM = self.pressure_cal['AD590M']
+                pB = self.pressure_cal['AD590B']
 
-            fbp = self.pressure_temperature_compensation["First Byte Position"]
-            ptc = int(raw_data[fbp:fbp + 3], 16) * pM + pB
+                fbp = self.pressure_temperature_compensation["First Byte Position"]
+                ptc = int(raw_data[fbp:fbp + 3], 16) * pM + pB
 
-            pf = pbyte0 * 256 + pbyte1 + pbyte2 / 256
+                pf = pbyte0 * 256 + pbyte1 + pbyte2 / 256
 
-            pc1 = self.pressure_cal['C1']
-            pc2 = self.pressure_cal['C2']
-            pc3 = self.pressure_cal['C3']
+                pc1 = self.pressure_cal['C1']
+                pc2 = self.pressure_cal['C2']
+                pc3 = self.pressure_cal['C3']
 
-            pc = pc1 + pc2 * ptc + pc3 * ptc ** 2
+                pc = pc1 + pc2 * ptc + pc3 * ptc ** 2
 
-            pd1 = self.pressure_cal['D1']
-            pd2 = self.pressure_cal['D2']
+                pd1 = self.pressure_cal['D1']
+                pd2 = self.pressure_cal['D2']
 
-            pd = pd1 + pd2 * ptc
+                pd = pd1 + pd2 * ptc
 
-            pt1 = self.pressure_cal['T1']
-            pt2 = self.pressure_cal['T2']
-            pt3 = self.pressure_cal['T3']
-            pt4 = self.pressure_cal['T4']
-            pt5 = self.pressure_cal['T5']
+                pt1 = self.pressure_cal['T1']
+                pt2 = self.pressure_cal['T2']
+                pt3 = self.pressure_cal['T3']
+                pt4 = self.pressure_cal['T4']
+                pt5 = self.pressure_cal['T5']
 
-            pt0 = pt1 + pt2 * ptc + pt3 * ptc ** 2 + pt4 * ptc ** 3 + pt5 * ptc ** 4
+                pt0 = pt1 + pt2 * ptc + pt3 * ptc ** 2 + pt4 * ptc ** 3 + pt5 * ptc ** 4
 
-            pt = 1e6 / pf
+                pt = 1e6 / pf
 
-            pressure = (pc * (1 - (pt0 ** 2) / (pt ** 2)) * (
-                1 - pd * (1 - (pt0 ** 2) / (pt ** 2)))) + self.pressure_offset
-            self.pressure.append(pressure)
+                pressure = (pc * (1 - (pt0 ** 2) / (pt ** 2)) * (
+                    1 - pd * (1 - (pt0 ** 2) / (pt ** 2)))) + self.pressure_offset
+            else:
+                pressure = "Removed"
+                
+            self.pressure.append("Removed")
 
-            fbp = self.conductivity_cal["First Byte Position"]
-            cbyte0 = int(raw_data[fbp:fbp + 2], 16)
-            cbyte1 = int(raw_data[fbp + 2:fbp + 4], 16)
-            cbyte2 = int(raw_data[fbp + 4:fbp + 6], 16)
+            if self.pressure_cal["Word"] not in self.removed_words:
+                fbp = self.conductivity_cal["First Byte Position"]
+                cbyte0 = int(raw_data[fbp:fbp + 2], 16)
+                cbyte1 = int(raw_data[fbp + 2:fbp + 4], 16)
+                cbyte2 = int(raw_data[fbp + 4:fbp + 6], 16)
 
-            cf = (cbyte0 * 256 + cbyte1 + cbyte2 / 256) / 1000
+                cf = (cbyte0 * 256 + cbyte1 + cbyte2 / 256) / 1000
 
-            cg = self.conductivity_cal['G']
-            ch = self.conductivity_cal['H']
-            ci = self.conductivity_cal['I']
-            cj = self.conductivity_cal['J']
+                cg = self.conductivity_cal['G']
+                ch = self.conductivity_cal['H']
+                ci = self.conductivity_cal['I']
+                cj = self.conductivity_cal['J']
 
-            cpcor = self.conductivity_cal['CPcor']
-            ctcor = self.conductivity_cal['CTcor']
+                cpcor = self.conductivity_cal['CPcor']
+                ctcor = self.conductivity_cal['CTcor']
 
-            condutivity = (cg + ch * cf ** 2 + ci * cf ** 3 + cj * cf ** 4) / (
-                10 * (1 + ctcor * its90 + cpcor * pressure))
-            self.conductivity.append(condutivity)
-
+                condutivity = (cg + ch * cf ** 2 + ci * cf ** 3 + cj * cf ** 4) / (
+                    10 * (1 + ctcor * its90 + cpcor * pressure))
+            else:
+                condutivity = "Removed"
+                
+            self.pressure.append("Removed")
+            
             salinity = self.get_salinity(condutivity, its90, pressure)
             self.salinity.append(salinity)
 
-            fbp = self.analog0_cal["First Byte Position"]
-            analog0 = 5 * (1 - (int(raw_data[fbp:fbp + 3], 16) / 4095))
-
+            if self.analog0_cal["Word"] not in self.removed_words:
+                fbp = self.analog0_cal["First Byte Position"]
+                analog0 = 5 * (1 - (int(raw_data[fbp:fbp + 3], 16) / 4095))
+            else:
+                analog0 = "Removed"
+                
             self.analog0.append(analog0)
 
-            fbp = self.analog1_cal["First Byte Position"]
-            analog1 = 5 * (1 - (int(raw_data[fbp:fbp + 3], 16) / 4095))
-
+            if self.analog1_cal["Word"] not in self.removed_words:
+                fbp = self.analog1_cal["First Byte Position"]
+                analog1 = 5 * (1 - (int(raw_data[fbp:fbp + 3], 16) / 4095))
+            else:
+                analog1 = "Removed"
+                
             self.analog1.append(analog1)
 
-            fbp = self.analog2_cal["First Byte Position"]
-            analog2 = 5 * (1 - (int(raw_data[fbp:fbp + 3], 16) / 4095))
-
+            if self.analog2_cal["Word"] not in self.removed_words:
+                fbp = self.analog2_cal["First Byte Position"]
+                analog2 = 5 * (1 - (int(raw_data[fbp:fbp + 3], 16) / 4095))
+            else:
+                analog2 = "Removed"
+                
             self.analog2.append(analog2)
-
-            fbp = self.analog3_cal["First Byte Position"]
-            analog3 = 5 * (1 - (int(raw_data[fbp:fbp + 3], 16) / 4095))
-
+                
+            if self.analog3_cal["Word"] not in self.removed_words:
+                fbp = self.analog3_cal["First Byte Position"]
+                analog3 = 5 * (1 - (int(raw_data[fbp:fbp + 3], 16) / 4095))
+            else:
+                analog3 = "Removed"
+                
             self.analog3.append(analog3)
 
-            fbp = self.analog4_cal["First Byte Position"]
-            analog4 = 5 * (1 - (int(raw_data[fbp:fbp + 3], 16) / 4095))
-
+            if self.analog4_cal["Word"] not in self.removed_words:
+                fbp = self.analog4_cal["First Byte Position"]
+                analog4 = 5 * (1 - (int(raw_data[fbp:fbp + 3], 16) / 4095))
+            else:
+                analog4 = "Removed"
+                
             self.analog4.append(analog4)
 
-            fbp = self.analog5_cal["First Byte Position"]
-            analog5 = 5 * (1 - (int(raw_data[fbp:fbp + 3], 16) / 4095))
-
+            if self.analog5_cal["Word"] not in self.removed_words:
+                fbp = self.analog5_cal["First Byte Position"]
+                analog5 = 5 * (1 - (int(raw_data[fbp:fbp + 3], 16) / 4095))
+            else:
+                analog5 = "Removed"
+                
             self.analog5.append(analog5)
 
             if self.analog6_cal["Word"] not in self.removed_words:
