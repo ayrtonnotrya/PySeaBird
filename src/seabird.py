@@ -58,6 +58,43 @@ class SBE9Plus():
         self.configuration_data = {}
         self.sensors = {}
 
+        self.analog0_cal = {}
+        self.analog1_cal = {}
+        self.analog2_cal = {}
+        self.analog3_cal = {}
+        self.analog4_cal = {}
+        self.analog5_cal = {}
+
+        self.temperature_cal["Description"] = "Primary temperature"
+        self.temperature_cal["Word"] = 0
+
+        self.conductivity_cal["Description"] = "Primary conductivity"
+        self.conductivity_cal["Word"] = 1
+
+        self.pressure_cal["Description"] = "Pressure"
+        self.pressure_cal["Word"] = 2
+
+        self.analog0_cal["Description"] = "Analog Input 0"
+        self.analog0_cal["Word"] = 5
+
+        self.analog1_cal["Description"] = "Analog Input 1"
+        self.analog1_cal["Word"] = 5
+
+        self.analog2_cal["Description"] = "Analog Input 2"
+        self.analog2_cal["Word"] = 6
+
+        self.analog3_cal["Description"] = "Analog Input 3"
+        self.analog3_cal["Word"] = 6
+
+        self.analog4_cal["Description"] = "Analog Input 4"
+        self.analog4_cal["Word"] = 7
+
+        self.analog5_cal["Description"] = "Analog Input 5"
+        self.analog5_cal["Word"] = 7
+
+        self.pressure_temperature_compensation["Description"] = "Pressure sensor temperature"
+        self.pressure_temperature_compensation["Word"] = 10
+
         # Lists with the raw data of the auxiliary inputs
         self.analog0 = []
         self.analog1 = []
@@ -192,36 +229,6 @@ class SBE9Plus():
         self.analog3_cal = {}
         self.analog4_cal = {}
         self.analog5_cal = {}
-
-        self.temperature_cal["Description"] = "Primary temperature"
-        self.temperature_cal["Word"] = 0
-
-        self.conductivity_cal["Description"] = "Primary conductivity"
-        self.conductivity_cal["Word"] = 1
-
-        self.pressure_cal["Description"] = "Pressure"
-        self.pressure_cal["Word"] = 2
-
-        self.analog0_cal["Description"] = "Analog Input 0"
-        self.analog0_cal["Word"] = 5
-
-        self.analog1_cal["Description"] = "Analog Input 1"
-        self.analog1_cal["Word"] = 5
-
-        self.analog2_cal["Description"] = "Analog Input 2"
-        self.analog2_cal["Word"] = 6
-
-        self.analog3_cal["Description"] = "Analog Input 3"
-        self.analog3_cal["Word"] = 6
-
-        self.analog4_cal["Description"] = "Analog Input 4"
-        self.analog4_cal["Word"] = 7
-
-        self.analog5_cal["Description"] = "Analog Input 5"
-        self.analog5_cal["Word"] = 7
-
-        self.pressure_temperature_compensation["Description"] = "Pressure sensor temperature"
-        self.pressure_temperature_compensation["Word"] = 10
 
         current_byte = 0
         if 0 not in removed_words:
