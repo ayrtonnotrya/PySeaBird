@@ -223,12 +223,6 @@ class SBE9Plus():
             "Instrument/SensorArray/Sensor/AltimeterSensor/"))
         self.oxygen_cal = self.get_dictionary(cal.iterfind(
             "Instrument/SensorArray/Sensor/OxygenSensor/"))
-        self.analog0_cal = {}
-        self.analog1_cal = {}
-        self.analog2_cal = {}
-        self.analog3_cal = {}
-        self.analog4_cal = {}
-        self.analog5_cal = {}
 
         current_byte = 0
         if 0 not in removed_words:
