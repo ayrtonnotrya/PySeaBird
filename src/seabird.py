@@ -111,8 +111,14 @@ class SBE9Plus():
             self.isComm = False
 
     def send_cmd(self, cmd):
+        """Sends a string through the serial port.
+        
+        Keyword arguments:
+        cmd -- String to be sent.
+        """
         if self.ser.isOpen():
             self.ser.write(cmd.encode())
+            time.sleep(0.25)
 
     def read_thread(self, ser, q, stop_event):
         while (not stop_event.is_set()):
